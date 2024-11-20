@@ -17,24 +17,21 @@ if 'captured_images' not in st.session_state:
 # Video processor class to capture frames from the camera
 class VideoProcessor(VideoProcessorBase):
     def __init__(self):
-        self.frame = None
-    
+        self.frame = None  # Initialize the frame as None
+
     def recv(self, frame):
+        # Process and store the most recent frame
         self.frame = frame.to_ndarray(format="bgr24")
         return av.VideoFrame.from_ndarray(self.frame, format="bgr24")
 
 # Start the camera
-webrtc_ctx = webrtc_streamer(
-    key="camera", 
-    video_processor_factory=VideoProcessor, 
-    media_stream_constraints={"video": True, "audio": False}
-)
+webrtc_ctx = webrtc_streamer(key="camera", video_processor_factory=VideoProcessor)
 
-# Displaying video feed status
-if webrtc_ctx.video_processor is None:
-    st.warning("Waiting for the camera to start...")
-else:
-    st.success("Camera is active. You can capture images.")
+# Feedback for the user about camera status
+if webrtc_ctx.video_processor and webrtc_ctx.state.playing:
+    st.info("Camera is active. You can capture images.")
+elif not webrtc_ctx.state.playing:
+    st.warning("Waiting for the camera to initialize...")
 
 # Capture button to save frames
 if webrtc_ctx.video_processor:
@@ -45,16 +42,16 @@ if webrtc_ctx.video_processor:
                 st.session_state['captured_images'].append(frame)
                 st.success(f"Captured image {len(st.session_state['captured_images'])}")
             else:
-                st.warning("No frame available to capture. Ensure the camera is active.")
+                st.warning("No frame available yet. Please try again.")
         else:
             st.warning("You can only capture up to 5 images.")
 
 # Display captured images
 if st.session_state['captured_images']:
     st.image(
-        st.session_state['captured_images'], 
-        caption=[f"Image {i+1}" for i in range(len(st.session_state['captured_images']))], 
-        use_column_width=True
+        st.session_state['captured_images'],
+        caption=[f"Image {i+1}" for i in range(len(st.session_state['captured_images']))],
+        use_column_width=True,
     )
 
 # Ensure the user has captured 3-5 images before proceeding to the mockup report
